@@ -21,11 +21,10 @@ def saisir(browser, xpath, keys):
 
 def element_exists(browser, xpath):
     try:
-        browser.find_element_by_xpath(xpath)
+        WebDriverWait(browser, 1).until(EC.visibility_of_element_located((By.XPATH, xpath)))
         return True
     except:
         return False
-
 
 def connexion(browser):
     browser.get("https://simulent.partenaire.test-gar.education.fr/auth/login")
@@ -46,48 +45,58 @@ def manipuler_csv(browser, dossier, fichier_csv):
     with open(chemin, mode='r', encoding='utf-8') as file:
         reader = csv.DictReader(file, delimiter=';')
 
-        for row in reader:
-            nom_complet = row['Nom'] + " " + row['Prénom']
-            saisir(browser,
-                   "/html/body/admin-app/app-nav/portal/section/div/div/structure/structure-home/div/div/user-search-card/div[2]/search-input/input",
-                   nom_complet)
-            cliquer(browser,
-                    "/html/body/admin-app/app-nav/portal/section/div/div/structure/structure-home/div/div/user-search-card/div[2]/div/ul/li")
-            print(nom_complet)
+        # Récupérer le premier nom et prénom pour la recherche initiale
+        first_row = next(reader)
+        nom_complet_initial = first_row['Nom'] + " " + first_row['Prénom']
 
+        saisir(browser, "/html/body/admin-app/app-nav/portal/section/div/div/structure/structure-home/div/div/user-search-card/div[2]/search-input/input", nom_complet_initial)
+        cliquer(browser, "/html/body/admin-app/app-nav/portal/section/div/div/structure/structure-home/div/div/user-search-card/div[2]/div/ul/li/a")
+        time.sleep(1)
+
+        # Traiter le nom de la première ligne à nouveau pour le processus de vérification du bouton, avant de traiter les autres noms
+        for row in [first_row] + list(reader):
+            nom_complet = row['Nom'] + " " + row['Prénom']
+            saisir(browser, "/html/body/admin-app/app-nav/portal/section/div/div/structure/users-root/side-layout/div/div[1]/div/user-list/list/search-input/input", nom_complet)
+            cliquer(browser, "/html/body/admin-app/app-nav/portal/section/div/div/structure/users-root/side-layout/div/div[1]/div/user-list/list/div[2]/ul/li")
+            time.sleep(1)
+
+            # Vérification de la présence du bouton
             if element_exists(browser,
                               "/html/body/admin-app/app-nav/portal/section/div/div/structure/users-root/side-layout/div/div[2]/div/user-detail/div[2]/user-info-section/panel-section/section/div[2]/form[3]/fieldset/form-field[2]/div/div/button"):
                 cliquer(browser,
                         "/html/body/admin-app/app-nav/portal/section/div/div/structure/users-root/side-layout/div/div[2]/div/user-detail/div[2]/user-info-section/panel-section/section/div[2]/form[3]/fieldset/form-field[2]/div/div/button")
-                mot_de_passe = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH,
-                                                                                                "/html/body/admin-app/app-nav/portal/section/div/div/structure/users-root/side-layout/div/div[2]/div/user-detail/div[2]/user-info-section/panel-section/section/div[2]/form[3]/fieldset/form-field[2]/div/div/span"))).text
+                time.sleep(1)
 
+                # Attendre que l'élément contenant le mot de passe apparaisse
+                xpath_mot_de_passe = "/html/body/admin-app/app-nav/portal/section/div/div/structure/users-root/side-layout/div/div[2]/div/user-detail/div[2]/user-info-section/panel-section/section/div[2]/form[3]/fieldset/form-field[2]/div/div/span"
+                mot_de_passe = WebDriverWait(browser, 10).until(
+                    EC.presence_of_element_located((By.XPATH, xpath_mot_de_passe))).text
+                mot_de_passe = mot_de_passe.replace("Code généré : ", "")
+
+                # Écrire dans le CSV bouton_trouve.csv
                 with open(BOUTON_TROUVE, mode='a', newline='', encoding='utf-8') as output:
                     writer = csv.writer(output)
-                    writer.writerow([row['Nom'], row['Prénom'], etablissement, mot_de_passe])
+                    writer.writerow([row['Nom'], row['Prénom'], row['Login'], etablissement, mot_de_passe])
 
             else:
                 with open(BOUTON_NON_TROUVE, mode='a', newline='', encoding='utf-8') as output:
                     writer = csv.writer(output)
-                    writer.writerow([row['Nom'], row['Prénom'], etablissement, row["Code d'activation"]])
-
+                    writer.writerow([row['Nom'], row['Prénom'], row['Login'],etablissement, row["Code d'activation"]])
 
 def main():
     browser = webdriver.Chrome()
 
     connexion(browser)
-    aller_admin(browser)
-
-    cliquer(browser, "/html/body/admin-app/app-nav/portal/header/div[1]/i")
 
     dossiers = ["liste1", "liste2", "liste3", "liste4"]
     for dossier in dossiers:
         for fichier_csv in os.listdir(dossier):
             if fichier_csv.endswith('.csv'):
-                saisir(browser, "/html/body/admin-app/app-nav/portal/section/div/side-panel/div/div/search-input/input",
-                       fichier_csv.replace('.csv', ''))
+                aller_admin(browser)
+                cliquer(browser, "/html/body/admin-app/app-nav/portal/header/div[1]/i")
+                saisir(browser, "/html/body/admin-app/app-nav/portal/section/div/side-panel/div/div/search-input/input", fichier_csv.replace('.csv', ''))
+                time.sleep(1)
                 cliquer(browser, "/html/body/admin-app/app-nav/portal/section/div/side-panel/div/item-tree/ul/li/a")
-                time.sleep(2)
                 manipuler_csv(browser, dossier, fichier_csv)
 
     browser.quit()
@@ -96,8 +105,9 @@ def main():
 if __name__ == "__main__":
     with open(BOUTON_TROUVE, mode='w', newline='', encoding='utf-8') as output:
         writer = csv.writer(output)
-        writer.writerow(["Nom", "Prénom", "Etablissement", "Mot de Passe"])
+        writer.writerow(["Nom", "Prénom", "Login", "Etablissement", "Mot de Passe"])
     with open(BOUTON_NON_TROUVE, mode='w', newline='', encoding='utf-8') as output:
         writer = csv.writer(output)
-        writer.writerow(["Nom", "Prénom", "Etablissement", "Code d'activation"])
+        writer.writerow(["Nom", "Prénom", "Login", "Etablissement", "Code d'activation"])
     main()
+

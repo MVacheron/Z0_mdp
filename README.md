@@ -11,21 +11,24 @@
 - Exécutez `main.py`.
 - Laissez le code s'exécuter pendant environ 20 minutes afin de garantir la récupération de tous les JDDs.
 
-### 2️⃣ `mdp_activate.py`
-
-**Description :**
-Ce script est à exécuter après avoir obtenu tous les JDDs avec `main.py`. Il a pour but d'actualiser les mots de mots de passes des personnes n'ayant pas encore activé leur compte.
-
-**Instructions :**
-- Après avoir attendu que `main.py` ait fini de s'exécuter, lancez `mdp_activate.py`.
-
 ### 2️⃣ `mdp_changer.py`
 
 **Description :**
-Ce script est à exécuter après avoir obtenu tous les JDDs avec `mdp_activate.py`. Il a pour but de changer les mots 
+Ce script est à exécuter après avoir obtenu tous les JDDs avec `main.py`. Il a pour but de changer les mots de passes des comptes activées
 
 **Instructions :**
-- Après avoir attendu que `main.py` et `mdp_activate.py` aient fini de s'exécuter, lancez `mdp_changer.py`.
+- Après avoir attendu que `main.py` ait fini de s'exécuter, lancez `mdp_changer.py`.
+
+
+### 3️⃣ `mdp_activate.py`
+
+**Description :**
+Ce script est à exécuter après avoir obtenu tous les JDDs avec `mdp_changer.py`. Il a pour but d'actualiser les mots de mots de passes des personnes n'ayant pas encore activé leur compte.
+En outre, le code `mdp_changer.py` référence les comptes n'ayants pas été activés. Ainsi, ces comptes sont activés automatiquement.
+
+**Instructions :**
+- Après avoir attendu que `mdp_changer.py` ait fini de s'exécuter, lancez `mdp_activate.py`.
+
 
 ## ⚠️ Notes importantes
 
